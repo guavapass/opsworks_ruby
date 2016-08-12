@@ -19,6 +19,7 @@ def node(override = {})
         #   database: 'dummydb',
         #   reaping_frequency: 10
         # },
+        environment: 'production',
         scm: {
           adapter: 'git',
           user: 'dummy',

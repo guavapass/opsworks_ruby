@@ -56,7 +56,7 @@ describe 'opsworks_ruby::configure' do
       expect(db_config[:adapter]).to eq 'postgresql'
       expect(chef_run)
         .to render_file("/srv/www/#{aws_opsworks_app['shortname']}/shared/config/database.yml").with_content(
-          JSON.parse({ development: db_config, production: db_config }.to_json).to_yaml
+          JSON.parse({ production: db_config }.to_json).to_yaml
         )
     end
 
@@ -299,14 +299,14 @@ describe 'opsworks_ruby::configure' do
 
       expect(chef_run)
         .to render_file("/srv/www/#{aws_opsworks_app['shortname']}/shared/config/database.yml").with_content(
-          JSON.parse({ development: db_config, production: db_config }.to_json).to_yaml
+          JSON.parse({ production: db_config }.to_json).to_yaml
         )
     end
   end
 
   context 'Sqlite3' do
     let(:dummy_node) do
-      node(deploy: { dummy_project: { database: { adapter: 'sqlite3' } } })
+      node(deploy: { dummy_project: { environment: "staging", database: { adapter: 'sqlite3' } } })
     end
     let(:chef_run) do
       ChefSpec::SoloRunner.new(platform: 'ubuntu', version: '14.04') do |solo_node|
@@ -325,7 +325,7 @@ describe 'opsworks_ruby::configure' do
       expect(db_config[:database]).to eq 'db/data.sqlite3'
       expect(chef_run)
         .to render_file("/srv/www/#{aws_opsworks_app['shortname']}/shared/config/database.yml").with_content(
-          JSON.parse({ development: db_config, production: db_config }.to_json).to_yaml
+          JSON.parse({ staging: db_config }.to_json).to_yaml
         )
     end
   end
@@ -334,6 +334,7 @@ describe 'opsworks_ruby::configure' do
     let(:supplied_node) do
       node(deploy: {
              dummy_project: {
+               environment: "preprod",
                database: {
                  adapter: 'postgresql',
                  username: 'user_936',
@@ -364,7 +365,7 @@ describe 'opsworks_ruby::configure' do
       expect(db_config[:database]).to eq 'database_936'
       expect(chef_run)
         .to render_file("/srv/www/#{aws_opsworks_app['shortname']}/shared/config/database.yml").with_content(
-          JSON.parse({ development: db_config, production: db_config }.to_json).to_yaml
+          JSON.parse({  preprod: db_config }.to_json).to_yaml
         )
     end
   end

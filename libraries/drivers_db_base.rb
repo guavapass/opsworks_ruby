@@ -21,7 +21,7 @@ module Drivers
         return unless applicable_for_configuration?
 
         database = out
-        rails_env = app['attributes']['rails_env']
+        rails_env = node['deploy'][app['shortname']]['environment']
         context.template File.join(deploy_dir(app), 'shared', 'config', 'database.yml') do
           source 'database.yml.erb'
           mode '0660'

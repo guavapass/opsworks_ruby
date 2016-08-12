@@ -48,7 +48,7 @@ module Drivers
       def add_unicorn_service_script(context)
         deploy_to = deploy_dir(app)
         app_shortname = app['shortname']
-        rails_env = app['attributes']['rails_env'] || 'production'
+        rails_env = node['deploy'][app['shortname']]['environment'] || 'production'
 
         context.template File.join(deploy_to, File.join('shared', 'scripts', 'unicorn.service')) do
           owner node['deployer']['user']
