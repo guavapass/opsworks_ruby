@@ -179,6 +179,40 @@ describe 'opsworks_ruby::configure' do
         .with_content("---\n:concurrency: 5\n:verbose: false\n:queues:\n- default")
     end
 
+    context "Multiple sidekiq configs" do
+
+      let(:dummy_node) do
+        node(deploy: {
+          dummy_project: {
+            environment: "staging",
+            worker: {
+              adapter: "sidekiq",
+              process_count: 2,
+              config: [
+                { concurrency: 5, queues: ["queue1", "queue2"] },
+                { concurrency: 7, queues: ["queue3", "queue4"] }
+              ]
+            }
+          }
+        })
+      end
+      let(:chef_run) do
+        ChefSpec::SoloRunner.new(platform: 'ubuntu', version: '14.04') do |solo_node|
+          solo_node.set['deploy'] = dummy_node['deploy']
+        end.converge(described_recipe)
+      end
+
+      it 'creates one sidekiq.conf.yml file for each different config' do
+        expect(chef_run)
+          .to render_file("/srv/www/#{aws_opsworks_app['shortname']}/shared/config/sidekiq_1.yml")
+          .with_content("---\n:concurrency: 5\n:queues:\n- queue1\n- queue2")
+        expect(chef_run)
+          .to render_file("/srv/www/#{aws_opsworks_app['shortname']}/shared/config/sidekiq_2.yml")
+          .with_content("---\n:concurrency: 7\n:queues:\n- queue3\n- queue4")
+      end
+
+    end
+
     context 'rhel' do
       it 'creates sidekiq.monitrc conf' do
         expect(chef_run_rhel)
