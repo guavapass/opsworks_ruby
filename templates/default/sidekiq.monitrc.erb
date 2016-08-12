@@ -8,8 +8,6 @@
 check process sidekiq_<%= identifier.to_s %>
   with pidfile <%= pid_file.to_s %>
 
-  start program = "/bin/su - <%= node['deployer']['user'] %> -c 'cd <%= File.join(@deploy_to, 'current') %> && <%= @environment.map {|k,v| "#{k}=\"#{v}\""}.join(' ') %> bundle exec sidekiq -C <%= conf_file.to_s %> -P <%= pid_file.to_s %><%= to_require.to_s %> <%= syslog.to_s %>'" with timeout 90 seconds
-
   start program = "/bin/su - <%= node['deployer']['user'] %> -c 'cd <%= File.join(@deploy_to, 'current') %> && (<%= @environment.map {|k,v| "#{k}=\"#{v}\""}.join(' ') %> bundle exec sidekiq -C <%= conf_file.to_s %> --index <%= n+1 %> --pidfile <%= pid_file.to_s %> --environment <%= node['deploy'][@application]['environment'] %>  -d)'" with timeout 30 seconds
 
   stop program = "/bin/su - <%= node['deployer']['user'] %> -c 'cd <%= File.join(@deploy_to, 'current') %> && (<%= @environment.map {|k,v| "#{k}=\"#{v}\""}.join(' ') %> bundle exec sidekiqctl stop <%= pid_file.to_s %>)'" with timeout 30 seconds
