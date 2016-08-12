@@ -10,7 +10,7 @@ module Drivers
       packages debian: 'zlib1g-dev', rhel: 'zlib-devel'
 
       def raw_out
-        super.merge(deploy_environment: { 'RAILS_ENV' => 'production' })
+        super.merge(deploy_environment: { 'RAILS_ENV' => node['deploy'][app['shortname']]['environment'] })
       end
 
       def deploy_before_restart(context)
