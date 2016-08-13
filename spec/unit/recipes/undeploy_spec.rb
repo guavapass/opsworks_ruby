@@ -34,9 +34,9 @@ describe 'opsworks_ruby::undeploy' do
     end
 
     it 'restarts sidekiqs via monit' do
-      expect(chef_run).to run_execute('monit reload')
-      expect(chef_run).to run_execute("monit restart sidekiq_#{aws_opsworks_app['shortname']}-1")
-      expect(chef_run).to run_execute("monit restart sidekiq_#{aws_opsworks_app['shortname']}-2")
+      restart = chef_run.execute("restart sidekiq_#{aws_opsworks_app['shortname']}-1")
+      expect(chef_run).to run_execute("restart sidekiq_#{aws_opsworks_app['shortname']}-1")
+      expect(restart).to notify("execute[monitor sidekiq_#{aws_opsworks_app['shortname']}-1]")
     end
   end
 

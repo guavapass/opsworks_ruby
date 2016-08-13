@@ -64,9 +64,23 @@ describe 'opsworks_ruby::deploy' do
     end
 
     it 'restarts sidekiqs via monit' do
-      expect(chef_run).to run_execute('monit reload')
-      expect(chef_run).to run_execute("monit restart sidekiq_#{aws_opsworks_app['shortname']}-1")
-      expect(chef_run).to run_execute("monit restart sidekiq_#{aws_opsworks_app['shortname']}-2")
+      deploy = chef_run.deploy(aws_opsworks_app['shortname'])
+      unmonitor = chef_run.execute("unmonitor sidekiq_#{aws_opsworks_app['shortname']}-1")
+      expect(chef_run).to run_execute("unmonitor sidekiq_#{aws_opsworks_app['shortname']}-1")
+      expect(unmonitor).to notify("execute[quiet sidekiq_#{aws_opsworks_app['shortname']}-1]")
+
+      restart = chef_run.execute("restart sidekiq_#{aws_opsworks_app['shortname']}-1")
+      expect(chef_run).to run_execute("restart sidekiq_#{aws_opsworks_app['shortname']}-1")
+      expect(restart).to notify("execute[monitor sidekiq_#{aws_opsworks_app['shortname']}-1]")
+
+
+      unmonitor = chef_run.execute("unmonitor sidekiq_#{aws_opsworks_app['shortname']}-2")
+      expect(chef_run).to run_execute("unmonitor sidekiq_#{aws_opsworks_app['shortname']}-2")
+      expect(unmonitor).to notify("execute[quiet sidekiq_#{aws_opsworks_app['shortname']}-2]")
+
+      restart = chef_run.execute("restart sidekiq_#{aws_opsworks_app['shortname']}-2")
+      expect(chef_run).to run_execute("restart sidekiq_#{aws_opsworks_app['shortname']}-2")
+      expect(restart).to notify("execute[monitor sidekiq_#{aws_opsworks_app['shortname']}-2]")
     end
   end
 

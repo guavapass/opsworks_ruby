@@ -11,22 +11,89 @@ module Drivers
         add_sidekiq_monit(context)
       end
 
-      def after_deploy(context)
-        context.execute 'monit reload'
+      def before_deploy(context)
+        deploy_to = deploy_dir(app)
+        env = { 'USER' => node['deployer']['user'] }
+
         (1..process_count).each do |process_number|
-          context.execute "monit restart sidekiq_#{app['shortname']}-#{process_number}" do
-            retries 3
+          pid_file = pid_file(process_number)
+          service_name = sidekiq_service_name(process_number)
+
+          context.execute "unmonitor #{service_name}" do
+            command "monit unmonitor #{service_name}"
+            notifies :run, "execute[quiet #{service_name}]", :immediately
           end
+
+          context.execute "quiet #{service_name}" do
+            action :nothing
+            cwd File.join(deploy_to, 'current')
+            command "bundle exec sidekiqctl quiet #{pid_file}"
+            user node['deployer']['user']
+            group www_group
+            environment env
+
+            only_if { File.exists?(pid_file) }
+          end
+        end
+      end
+
+      def after_deploy(context)
+        deploy_to = deploy_dir(app)
+        (1..process_count).each do |process_number|
+          env = { 'USER' => node['deployer']['user'] }
+          service_name = sidekiq_service_name(process_number)
+          start_command = start_sidekiq_command(process_number)
+          stop_command = stop_sidekiq_command(process_number)
+
+          context.execute "monitor #{service_name}" do
+            action :nothing
+            command "monit monitor #{service_name}"
+          end
+
+          context.execute "restart #{service_name}" do
+            cwd File.join(deploy_to, 'current')
+            user node['deployer']['user']
+            group www_group
+            environment env
+            command stop_command
+            command start_command
+            notifies :run, "execute[monitor #{service_name}]", :immediately
+          end
+
         end
       end
       alias after_undeploy after_deploy
 
+
+
       private
+
+      def start_sidekiq_command(process_number)
+        pid_file = pid_file(process_number)
+        config_file = config_file(process_number)
+        deploy_to = deploy_dir(app)
+
+        args = []
+        args.push "--index #{process_number}"
+        args.push "--pidfile #{pid_file}"
+        args.push "--environment #{rails_env}"
+        args.push "--config #{config_file}"
+        args.push "--require #{File.join(deploy_to, 'current', out[:require])}" if out[:require].present?
+        args.push '--daemon'
+
+        "sidekiq #{args.compact.join(' ')}"
+      end
+
+      def stop_sidekiq_command(process_number)
+        "sidekiqctl stop #{pid_file(process_number)} 60"
+      end
+
+
 
       def add_sidekiq_config(context)
         deploy_to = deploy_dir(app)
-        each_process do |process_number, process_config|
-          context.template File.join(deploy_to, File.join('shared', 'config', "sidekiq_#{process_number}.yml")) do
+        each_process_with_config do |process_number, process_config|
+          context.template File.join(deploy_to, config_file(process_number)) do
             owner node['deployer']['user']
             group www_group
             source 'sidekiq.conf.yml.erb'
@@ -35,7 +102,19 @@ module Drivers
         end
       end
 
-      def each_process
+      def sidekiq_service_name(process_number)
+        "sidekiq_#{app['shortname']}-#{process_number}"
+      end
+
+      def pid_file(process_number)
+        "#{deploy_dir(app)}/shared/pids/sidekiq_#{process_number}.pid"
+      end
+
+      def config_file(process_number)
+        File.join('shared', 'config', "sidekiq_#{process_number}.yml")
+      end
+
+      def each_process_with_config
         configs = Array.wrap(configuration)
 
         (1..process_count).each do |process_number|
@@ -55,6 +134,7 @@ module Drivers
           source 'sidekiq.monitrc.erb'
           variables application: app_shortname, out: output, deploy_to: deploy_to, environment: env
         end
+        context.execute 'monit reload'
       end
 
       def process_count

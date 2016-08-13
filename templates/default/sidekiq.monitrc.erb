@@ -2,16 +2,18 @@
   <% identifier = "#{@application}-#{n+1}" %>
   <% conf_file = "#{@deploy_to}/shared/config/sidekiq_#{n+1}.yml" %>
   <% pid_file = "#{@deploy_to}/shared/pids/sidekiq_#{identifier}.pid" %>
-  <% syslog = !!@out[:syslog] ? "2>&1 | logger -t sidekiq-#{identifier}" : '' %>
   <% to_require = @out[:require].present? ? " -r #{File.join(@deploy_to, 'current', @out[:require])}" : '' %>
+  <% user = node['deployer']['user'] %>
+  <% current_path = File.join(@deploy_to, 'current') %>
+  <% log_file = File.join(@deploy_to, 'shared', 'log', "sidekiq_#{identifier}.log") %>
+  <% env_vars = @environment.map {|k,v| "#{k}=\"#{v}\""}.join(' ') %>
+  <% rails_env = node['deploy'][@application]['environment'] %>
 
 check process sidekiq_<%= identifier.to_s %>
   with pidfile <%= pid_file.to_s %>
 
-  start program = "/bin/su - <%= node['deployer']['user'] %> -c 'cd <%= File.join(@deploy_to, 'current') %> && (<%= @environment.map {|k,v| "#{k}=\"#{v}\""}.join(' ') %> bundle exec sidekiq -C <%= conf_file.to_s %> --index <%= n+1 %> --pidfile <%= pid_file.to_s %> --environment <%= node['deploy'][@application]['environment'] %>  -d)'" with timeout 30 seconds
-
-  stop program = "/bin/su - <%= node['deployer']['user'] %> -c 'cd <%= File.join(@deploy_to, 'current') %> && (<%= @environment.map {|k,v| "#{k}=\"#{v}\""}.join(' ') %> bundle exec sidekiqctl stop <%= pid_file.to_s %>)'" with timeout 30 seconds
-
+  start program = "/bin/su - <%= user %> -c 'cd <%= current_path %> && (<%= env_vars %> bundle exec sidekiq -C <%= conf_file.to_s %> --index <%= n+1 %> --pidfile <%= pid_file.to_s %> --environment <%= rails_env %> --logfile <%= log_file %>  -d)'" with timeout 30 seconds
+  stop program = "/bin/su - <%= user %> -c 'cd <%= current_path %> && (<%= env_vars %> bundle exec sidekiqctl stop <%= pid_file.to_s %>)'" with timeout 30 seconds
   group sidekiq_<%= @application.to_s %>_group
 
 <% end %>
