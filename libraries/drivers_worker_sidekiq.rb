@@ -25,19 +25,22 @@ module Drivers
 
       def add_sidekiq_config(context)
         deploy_to = deploy_dir(app)
-
-        configs = Array[*configuration]
-
-        (1..process_count).each do |process_number|
-
-          process_config = configs.count > 1 ? configs[process_number - 1] : configs[0]
-
+        each_process do |process_number, process_config|
           context.template File.join(deploy_to, File.join('shared', 'config', "sidekiq_#{process_number}.yml")) do
             owner node['deployer']['user']
             group www_group
             source 'sidekiq.conf.yml.erb'
             variables config: process_config
           end
+        end
+      end
+
+      def each_process
+        configs = Array.wrap(configuration)
+
+        (1..process_count).each do |process_number|
+          process_config = configs.count > 1 ? configs[process_number - 1] : configs[0]
+          yield(process_number, process_config)
         end
       end
 
