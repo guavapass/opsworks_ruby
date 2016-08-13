@@ -80,7 +80,7 @@ module Drivers
         deploy_to = deploy_dir(app)
         pid_file = pid_file(process_number)
         config_file = config_file(process_number)
-        log_file = File.join(deploy_to, 'shared', 'log', "{process_number(process_number)}.log")
+        log_file = File.join(deploy_to, 'shared', 'log', "#{sidekiq_service_name(process_number)}.log")
         rails_env = node['deploy'][app['shortname']]['environment']
 
         args = ["--index #{process_number}"]
@@ -113,11 +113,11 @@ module Drivers
       end
 
       def pid_file(process_number)
-        "#{deploy_dir(app)}/shared/pids/sidekiq_#{sidekiq_service_name(process_number)}.pid"
+        "#{deploy_dir(app)}/shared/pids/#{sidekiq_service_name(process_number)}.pid"
       end
 
       def config_file(process_number)
-        File.join('shared', 'config', "sidekiq_#{sidekiq_service_name(process_number)}.yml")
+        File.join('shared', 'config', "#{sidekiq_service_name(process_number)}.yml")
       end
 
       def sidekiq_service_name(process_number)
