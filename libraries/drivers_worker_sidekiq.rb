@@ -52,16 +52,28 @@ module Drivers
             environment env
             command "bundle exec sidekiqctl stop #{pid_file} 60"
             only_if { File.exists?(pid_file) }
-            notifies :run, "execute[start #{service_name}]", :immediately
+            notifies :run, "execute[restart #{service_name}]", :immediately
           end
 
-          context.execute "start #{service_name}" do
+
+          context.execute "restart #{service_name}" do
             action :nothing
             cwd File.join(deploy_to, 'current')
             user node['deployer']['user']
             group www_group
             environment env
             command start_command
+            notifies :run, "execute[monitor #{service_name}]", :immediately
+          end
+
+          context.execute "start #{service_name}" do
+            action :run
+            cwd File.join(deploy_to, 'current')
+            user node['deployer']['user']
+            group www_group
+            environment env
+            command start_command
+            not_if { File.exists?(pid_file) }
             notifies :run, "execute[monitor #{service_name}]", :immediately
           end
 
