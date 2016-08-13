@@ -39,23 +39,23 @@ module Drivers
 
       def after_deploy(context)
         deploy_to = deploy_dir(app)
+        env = environment
         (1..process_count).each do |process_number|
-          env = { 'USER' => node['deployer']['user'] }
           service_name = sidekiq_service_name(process_number)
           start_command = start_sidekiq_command(process_number)
-          stop_command = stop_sidekiq_command(process_number)
-
+          pid_file = pid_file(process_number)
 
           context.execute "stop #{service_name}" do
             cwd File.join(deploy_to, 'current')
             user node['deployer']['user']
             group www_group
             environment env
-            command stop_command
-            notifies :run, "execute[restart #{service_name}]", :immediately
+            command "bundle exec sidekiqctl stop #{pid_file} 60"
+            only_if { File.exists?(pid_file) }
+            notifies :run, "execute[start #{service_name}]", :immediately
           end
 
-          context.execute "restart #{service_name}" do
+          context.execute "start #{service_name}" do
             action :nothing
             cwd File.join(deploy_to, 'current')
             user node['deployer']['user']
@@ -79,7 +79,7 @@ module Drivers
       def start_sidekiq_command(process_number)
         deploy_to = deploy_dir(app)
         pid_file = pid_file(process_number)
-        config_file = File.join(deploy_to, 'shared','config', config_file(process_number))
+        config_file = config_file(process_number)
         log_file = File.join(deploy_to, 'shared', 'log', "#{sidekiq_service_name(process_number)}.log")
         rails_env = node['deploy'][app['shortname']]['environment']
 
@@ -91,19 +91,13 @@ module Drivers
         args.push "--logfile #{log_file}"
         args.push '--daemon'
 
-        "bundle exec sidekiq RAILS_ENV=#{rails_env} #{args.compact.join(' ')}"
+        "bundle exec sidekiq #{args.compact.join(' ')}"
       end
-
-      def stop_sidekiq_command(process_number)
-        "bundle exec sidekiqctl stop #{pid_file(process_number)} 60"
-      end
-
-
 
       def add_sidekiq_config(context)
         deploy_to = deploy_dir(app)
         each_process_with_config do |process_number, process_config|
-          context.template File.join(deploy_to, config_file(process_number)) do
+          context.template config_file(process_number) do
             owner node['deployer']['user']
             group www_group
             source 'sidekiq.conf.yml.erb'
@@ -117,7 +111,7 @@ module Drivers
       end
 
       def config_file(process_number)
-        File.join('shared', 'config', "#{sidekiq_service_name(process_number)}.yml")
+        "#{deploy_dir(app)}/shared/config/#{sidekiq_service_name(process_number)}.yml"
       end
 
       def sidekiq_service_name(process_number)
