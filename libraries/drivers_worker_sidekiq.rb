@@ -112,16 +112,16 @@ module Drivers
         end
       end
 
-      def sidekiq_service_name(process_number)
-        "sidekiq_#{app['shortname']}-#{process_number}"
-      end
-
       def pid_file(process_number)
-        "#{deploy_dir(app)}/shared/pids/sidekiq_#{process_number}.pid"
+        "#{deploy_dir(app)}/shared/pids/sidekiq_#{sidekiq_service_name(process_number)}.pid"
       end
 
       def config_file(process_number)
-        File.join('shared', 'config', "sidekiq_#{process_number}.yml")
+        File.join('shared', 'config', "sidekiq_#{sidekiq_service_name(process_number)}.yml")
+      end
+
+      def sidekiq_service_name(process_number)
+        "sidekiq_#{app['shortname']}-#{process_number}"
       end
 
       def each_process_with_config
