@@ -79,7 +79,7 @@ module Drivers
       def start_sidekiq_command(process_number)
         deploy_to = deploy_dir(app)
         pid_file = pid_file(process_number)
-        config_file = File.join(deploy_to, 'shared', ,'config', config_file(process_number))
+        config_file = File.join(deploy_to, 'shared','config', config_file(process_number))
         log_file = File.join(deploy_to, 'shared', 'log', "#{sidekiq_service_name(process_number)}.log")
         rails_env = node['deploy'][app['shortname']]['environment']
 
