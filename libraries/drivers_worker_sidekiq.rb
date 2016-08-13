@@ -74,15 +74,14 @@ module Drivers
       end
       alias after_undeploy after_deploy
 
-
-
       private
 
       def start_sidekiq_command(process_number)
         deploy_to = deploy_dir(app)
         pid_file = pid_file(process_number)
         config_file = config_file(process_number)
-        log_file = File.join(deploy_to, 'shared', 'log', "sidekiq_#{process_number}.log")
+        log_file = File.join(deploy_to, 'shared', 'log', "{process_number(process_number)}.log")
+        rails_env = node['deploy'][app['shortname']]['environment']
 
         args = ["--index #{process_number}"]
         args.push "--pidfile #{pid_file}"

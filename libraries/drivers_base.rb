@@ -19,10 +19,6 @@ module Drivers
       (@adapter || self.class.name.underscore).to_s
     end
 
-    def rails_env
-      node['deploy'][app['shortname']]['environment']
-    end
-
     # Dummy methods for children to redefine
     def setup(_context)
     end
