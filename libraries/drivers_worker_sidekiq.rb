@@ -45,19 +45,29 @@ module Drivers
           start_command = start_sidekiq_command(process_number)
           stop_command = stop_sidekiq_command(process_number)
 
-          context.execute "monitor #{service_name}" do
-            action :nothing
-            command "monit monitor #{service_name}"
-          end
 
-          context.execute "restart #{service_name}" do
+          context.execute "stop #{service_name}" do
             cwd File.join(deploy_to, 'current')
             user node['deployer']['user']
             group www_group
             environment env
             command stop_command
+            notifies :run, "execute[restart #{service_name}]", :immediately
+          end
+
+          context.execute "restart #{service_name}" do
+            action :nothing
+            cwd File.join(deploy_to, 'current')
+            user node['deployer']['user']
+            group www_group
+            environment env
             command start_command
             notifies :run, "execute[monitor #{service_name}]", :immediately
+          end
+
+          context.execute "monitor #{service_name}" do
+            action :nothing
+            command "monit monitor #{service_name}"
           end
 
         end
@@ -69,23 +79,24 @@ module Drivers
       private
 
       def start_sidekiq_command(process_number)
+        deploy_to = deploy_dir(app)
         pid_file = pid_file(process_number)
         config_file = config_file(process_number)
-        deploy_to = deploy_dir(app)
+        log_file = File.join(deploy_to, 'shared', 'log', "sidekiq_#{process_number}.log")
 
-        args = []
-        args.push "--index #{process_number}"
+        args = ["--index #{process_number}"]
         args.push "--pidfile #{pid_file}"
         args.push "--environment #{rails_env}"
         args.push "--config #{config_file}"
         args.push "--require #{File.join(deploy_to, 'current', out[:require])}" if out[:require].present?
+        args.push "--logfile #{log_file}"
         args.push '--daemon'
 
-        "sidekiq #{args.compact.join(' ')}"
+        "bundle exec sidekiq #{args.compact.join(' ')}"
       end
 
       def stop_sidekiq_command(process_number)
-        "sidekiqctl stop #{pid_file(process_number)} 60"
+        "bundle exec sidekiqctl stop #{pid_file(process_number)} 60"
       end
 
 

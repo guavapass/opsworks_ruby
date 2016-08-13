@@ -12,7 +12,7 @@
 check process sidekiq_<%= identifier.to_s %>
   with pidfile <%= pid_file.to_s %>
 
-  start program = "/bin/su - <%= user %> -c 'cd <%= current_path %> && (<%= env_vars %> bundle exec sidekiq -C <%= conf_file.to_s %> --index <%= n+1 %> --pidfile <%= pid_file.to_s %> --environment <%= rails_env %> --logfile <%= log_file %>  -d)'" with timeout 30 seconds
+  start program = "/bin/su - <%= user %> -c 'cd <%= current_path %> && (<%= env_vars %> bundle exec sidekiq -C <%= conf_file.to_s %> --index <%= n+1 %> --pidfile <%= pid_file.to_s %> --environment <%= rails_env %> --logfile <%= log_file %> --daemon)'" with timeout 30 seconds
   stop program = "/bin/su - <%= user %> -c 'cd <%= current_path %> && (<%= env_vars %> bundle exec sidekiqctl stop <%= pid_file.to_s %>)'" with timeout 30 seconds
   group sidekiq_<%= @application.to_s %>_group
 
