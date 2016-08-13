@@ -91,7 +91,7 @@ module Drivers
         args.push "--logfile #{log_file}"
         args.push '--daemon'
 
-        "bundle exec sidekiq #{args.compact.join(' ')}"
+        "bundle exec sidekiq RAILS_ENV=#{rails_env} #{args.compact.join(' ')}"
       end
 
       def stop_sidekiq_command(process_number)
