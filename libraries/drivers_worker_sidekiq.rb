@@ -11,6 +11,15 @@ module Drivers
         add_sidekiq_monit(context)
       end
 
+      def setup(context)
+        (1..process_count).each do |process_number|
+          pid_file = pid_file(process_number)
+          context.file pid_file do
+            action :delete
+          end
+        end
+      end
+
       def before_deploy(context)
         deploy_to = deploy_dir(app)
         env = { 'USER' => node['deployer']['user'] }
