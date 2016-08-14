@@ -33,7 +33,7 @@ module Drivers
             group www_group
             environment env
 
-            only_if { File.exists?(pid_file) && Process.exists(File.read(pid_file).chomp) }
+            only_if { File.exists?(pid_file) && (pid = File.read(pid_file).chomp) && system("ps aux | grep #{pid} | grep -v grep > /dev/null") }
           end
         end
       end
@@ -52,7 +52,7 @@ module Drivers
             group www_group
             environment env
             command "bundle exec sidekiqctl stop #{pid_file} 60"
-            only_if { File.exists?(pid_file) && Process.exists(File.read(pid_file).chomp) }
+            only_if { File.exists?(pid_file) && (pid = File.read(pid_file).chomp) && system("ps aux | grep #{pid} | grep -v grep > /dev/null") }
             notifies :run, "execute[restart #{service_name}]", :immediately
           end
 
@@ -74,7 +74,7 @@ module Drivers
             group www_group
             environment env
             command start_command
-            not_if { File.exists?(pid_file) && Process.exists(File.read(pid_file).chomp) }
+            not_if { File.exists?(pid_file) && (pid = File.read(pid_file).chomp) && system("ps aux | grep #{pid} | grep -v grep > /dev/null") }
             notifies :run, "execute[monitor #{service_name}]", :immediately
           end
 
