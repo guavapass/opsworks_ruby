@@ -11,7 +11,7 @@ module Drivers
         add_sidekiq_monit(context)
       end
 
-      def setup(context)
+      def shutdown(context)
         (1..process_count).each do |process_number|
           pid_file = pid_file(process_number)
           context.file pid_file do
