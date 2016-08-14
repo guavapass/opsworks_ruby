@@ -12,8 +12,24 @@ module Drivers
       end
 
       def shutdown(context)
+        env = { 'USER' => node['deployer']['user'] }
         (1..process_count).each do |process_number|
           pid_file = pid_file(process_number)
+
+          context.execute "unmonitor #{service_name}" do
+            command "monit unmonitor #{service_name}"
+            notifies :run, "execute[quiet #{service_name}]", :immediately
+          end
+
+          context.execute "stop #{service_name}" do
+            cwd File.join(deploy_to, 'current')
+            user node['deployer']['user']
+            group www_group
+            environment env
+            command "bundle exec sidekiqctl stop #{pid_file} 60"
+            only_if { File.exists?(pid_file) }
+          end
+
           context.file pid_file do
             action :delete
           end
@@ -96,6 +112,8 @@ module Drivers
       alias after_undeploy after_deploy
 
       private
+
+
 
       def start_sidekiq_command(process_number)
         deploy_to = deploy_dir(app)
