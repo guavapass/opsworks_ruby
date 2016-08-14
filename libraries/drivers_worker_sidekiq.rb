@@ -11,31 +11,6 @@ module Drivers
         add_sidekiq_monit(context)
       end
 
-      def shutdown(context)
-        env = { 'USER' => node['deployer']['user'] }
-        (1..process_count).each do |process_number|
-          pid_file = pid_file(process_number)
-
-          context.execute "unmonitor #{service_name}" do
-            command "monit unmonitor #{service_name}"
-            notifies :run, "execute[quiet #{service_name}]", :immediately
-          end
-
-          context.execute "stop #{service_name}" do
-            cwd File.join(deploy_to, 'current')
-            user node['deployer']['user']
-            group www_group
-            environment env
-            command "bundle exec sidekiqctl stop #{pid_file} 60"
-            only_if { File.exists?(pid_file) }
-          end
-
-          context.file pid_file do
-            action :delete
-          end
-        end
-      end
-
       def before_deploy(context)
         deploy_to = deploy_dir(app)
         env = { 'USER' => node['deployer']['user'] }
@@ -43,6 +18,7 @@ module Drivers
         (1..process_count).each do |process_number|
           pid_file = pid_file(process_number)
           service_name = sidekiq_service_name(process_number)
+
 
           context.execute "unmonitor #{service_name}" do
             command "monit unmonitor #{service_name}"
@@ -57,7 +33,7 @@ module Drivers
             group www_group
             environment env
 
-            only_if { File.exists?(pid_file) }
+            only_if { File.exists?(pid_file) && Process.exists(File.read(pid_file).chomp) }
           end
         end
       end
@@ -76,7 +52,7 @@ module Drivers
             group www_group
             environment env
             command "bundle exec sidekiqctl stop #{pid_file} 60"
-            only_if { File.exists?(pid_file) }
+            only_if { File.exists?(pid_file) && Process.exists(File.read(pid_file).chomp) }
             notifies :run, "execute[restart #{service_name}]", :immediately
           end
 
@@ -98,7 +74,7 @@ module Drivers
             group www_group
             environment env
             command start_command
-            not_if { File.exists?(pid_file) }
+            not_if { File.exists?(pid_file) && Process.exists(File.read(pid_file).chomp) }
             notifies :run, "execute[monitor #{service_name}]", :immediately
           end
 
@@ -191,6 +167,15 @@ module Drivers
 
       def configuration
         JSON.parse(out[:config].to_json, symbolize_names: true)
+      end
+
+      def process_running?(process_number)
+        pid_file = pid_file(process_number)
+        if File.exists?(pid_file) && (pid = File.read(pid_file).chomp) && system("ps aux | grep #{pid} | grep -v grep > /dev/null")
+          pid
+        else
+          false
+        end
       end
     end
   end
