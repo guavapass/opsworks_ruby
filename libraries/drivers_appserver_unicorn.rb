@@ -15,8 +15,7 @@ module Drivers
       end
 
       def after_deploy(context)
-        manual_action(context, :stop)
-        manual_action(context, :start)
+        manual_action(context, :restart)
       end
       alias after_undeploy after_deploy
 
