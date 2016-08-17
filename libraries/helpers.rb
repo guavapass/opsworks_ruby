@@ -60,7 +60,7 @@ end
 
 def perform_bundle_install(release_path)
   execute 'bundle_install' do
-    command 'bundle install --deployment --path "#{release_path}/../../shared/vendor/bundle" --without development test'
+    command "bundle install --deployment --path #{release_path}/../../shared/vendor/bundle --without development test"
     cwd release_path
   end
 end
