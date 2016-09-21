@@ -18,11 +18,13 @@ module Drivers
         (1..process_count).each do |process_number|
           pid_file = pid_file(process_number)
           service_name = sidekiq_service_name(process_number)
-
+          proccess_running = process_running?(process_number)
 
           context.execute "unmonitor #{service_name}" do
             command "monit unmonitor #{service_name}"
             notifies :run, "execute[quiet #{service_name}]", :immediately
+            only_if { proccess_running }
+            ignore_failure true
           end
 
           context.execute "quiet #{service_name}" do
@@ -32,8 +34,8 @@ module Drivers
             user node['deployer']['user']
             group www_group
             environment env
-
-            only_if { File.exists?(pid_file) && (pid = File.read(pid_file).chomp) && system("ps aux | grep #{pid} | grep -v grep > /dev/null") }
+            only_if { proccess_running }
+            ignore_failure true
           end
         end
       end
